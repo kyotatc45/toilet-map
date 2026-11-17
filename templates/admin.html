@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者画面 | 大学トイレ検索</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        button {
+            padding: 6px 12px;
+            margin-right: 5px;
+            cursor: pointer;
+        }
+
+        #map-container {
+            position: relative;
+            width: 100%;
+            max-width: 471px;
+        }
+
+        #floor-map {
+            width: 100%;
+            display: block;
+        }
+
+        #map-marker {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: red;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>トイレ情報管理</h1>
+
+    <form action="{{ url_for('add_toilet') }}" method="post" id="toilet-form">
+        <p>
+            <label for="building">棟：</label>
+            <select name="building" id="building" required>
+                {% for building in [
+                    "A", "B", "C", "D", "E", "F", "G", "H",
+                    "J", "K", "L", "M", "N", "Q", "R", "S"
+                ] %}
+                    <option value="{{ building }}">{{ building }}棟</option>
+                {% endfor %}
+            </select>
+        </p>
+
+        <p>
+            <label for="floor">階：</label>
+            <input type="number" name="floor" id="floor"
+                   min="1" required>
+        </p>
+
+        <div id="map-section" style="display: none;">
+            <h2 id="map-title">S棟3階 トイレ配置マップ</h2>
+            <p>トイレを設置したい場所をクリックしてください。</p>
+
+            <div id="map-container">
+                <img
+                    id="floor-map"
+                    src="{{ url_for('static', filename='s_building_3f.png') }}"
+                    alt="S棟3階の地図"
+                >
+                <div id="map-marker"></div>
+            </div>
+
+            <input type="hidden" name="x" id="x">
+            <input type="hidden" name="y" id="y">
+        </div>
+
+        <p>
+            <button type="submit">登録する</button>
+        </p>
+    </form>
+
+    <h2>登録済みのトイレ情報</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>棟</th>
+                <th>階</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for building in [
+                "A", "B", "C", "D", "E", "F", "G", "H",
+                "J", "K", "L", "M", "N", "Q", "R", "S"
+            ] %}
+                {% set building_toilets = toilets
+                    | selectattr("1", "equalto", building)
+                    | list %}
+
+                {% if building_toilets %}
+                    {% for id, b, floor in building_toilets %}
+                    <tr>
+                        {% if loop.first %}
+                        <td rowspan="{{ building_toilets | length }}">
+                            {{ building }}棟
+                        </td>
+                        {% endif %}
+
+                        <td>{{ floor }}階</td>
+                        <td>
+                            <form
+                                action="{{ url_for('delete_toilet', toilet_id=id) }}"
+                                method="post"
+                                onsubmit="return confirm('このトイレ情報を削除しますか？');"
+                            >
+                                <button type="submit">削除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>{{ building }}棟</td>
+                        <td></td>
+                        <td>
+                            <form
+                                action="{{ url_for('delete_building', building=building) }}"
+                                method="post"
+                                onsubmit="return confirm('{{ building }}棟のトイレ情報をすべて削除しますか？');"
+                            >
+                                <button type="submit">削除</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        const buildingSelect = document.getElementById("building");
+        const floorInput = document.getElementById("floor");
+        const mapSection = document.getElementById("map-section");
+        const map = document.getElementById("floor-map");
+        const marker = document.getElementById("map-marker");
+        const xInput = document.getElementById("x");
+        const yInput = document.getElementById("y");
+        const mapTitle = document.getElementById("map-title");
+
+        function updateMap() {
+            const building = buildingSelect.value;
+            const floor = floorInput.value;
+
+            const showMap =
+                building === "S" &&
+                ["3", "4", "5", "6", "7"].includes(floor);
+
+            mapSection.style.display = showMap ? "block" : "none";
+
+            if (!showMap) {
+                marker.style.display = "none";
+                xInput.value = "";
+                yInput.value = "";
+                return;
+            }
+
+            if (floor === "3") {
+                map.src = "{{ url_for('static', filename='s_building_3f.png') }}";
+                map.alt = "S棟3階の地図";
+                mapTitle.textContent = "S棟3階 トイレ配置マップ";
+            } else {
+                map.src = "{{ url_for('static', filename='s_building_4f.png') }}";
+                map.alt = "S棟4～7階の共通地図";
+                mapTitle.textContent = "S棟" + floor + "階 トイレ配置マップ";
+            }
+
+            marker.style.display = "none";
+            xInput.value = "";
+            yInput.value = "";
+        }
+
+        buildingSelect.addEventListener("change", updateMap);
+        floorInput.addEventListener("input", updateMap);
+
+        map.addEventListener("click", function(event) {
+            const rect = map.getBoundingClientRect();
+
+            const x = (event.clientX - rect.left) / rect.width * 100;
+            const y = (event.clientY - rect.top) / rect.height * 100;
+
+            marker.style.left = x + "%";
+            marker.style.top = y + "%";
+            marker.style.display = "block";
+
+            xInput.value = x;
+            yInput.value = y;
+        });
+    </script>
+</body>
+</html>

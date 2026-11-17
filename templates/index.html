@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大学トイレ検索</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        #map-container {
+            position: relative;
+            width: 100%;
+            max-width: 471px;
+        }
+
+        #floor-map {
+            width: 100%;
+            display: block;
+        }
+
+        .toilet-marker {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: red;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+
+<body>
+    <h1>大学トイレ検索</h1>
+
+    <p>建物と階を選択してください。</p>
+
+    <form method="get">
+        <select name="building" required>
+            {% for b in [
+                "A", "B", "C", "D", "E", "F", "G", "H",
+                "J", "K", "L", "M", "N", "Q", "R", "S"
+            ] %}
+                <option value="{{ b }}"
+                    {% if building == b %}selected{% endif %}>
+                    {{ b }}棟
+                </option>
+            {% endfor %}
+        </select>
+
+        <input
+            type="number"
+            name="floor"
+            min="1"
+            placeholder="階"
+            value="{{ floor if floor else '' }}"
+            required
+        >
+
+        <button type="submit">検索</button>
+    </form>
+
+    {% if building and floor %}
+        <h2>{{ building }}棟 {{ floor }}階のトイレ</h2>
+
+        {% if toilets %}
+            <p>登録されているトイレの数：{{ toilets|length }}件</p>
+        {% endif %}
+
+        {% if building == "S" and floor in [3, 4, 5, 6, 7] %}
+
+{% if floor == 3 %}
+    {% set map_filename = "s_building_3f.png" %}
+{% else %}
+    {% set map_filename = "s_building_4f.png" %}
+{% endif %}
+
+            <div id="map-container">
+                <img
+                    id="floor-map"
+                    src="{{ url_for('static', filename=map_filename) }}"
+                    alt="S棟{{ floor }}階の地図"
+                >
+
+                {% for toilet_floor, x, y in toilets %}
+                    {% if x is not none and y is not none %}
+                        <div
+                            class="toilet-marker"
+                            style="left: {{ x }}%; top: {{ y }}%;"
+                        ></div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+        {% endif %}
+    {% endif %}
+</body>
+</html>
