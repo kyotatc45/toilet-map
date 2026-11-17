@@ -24,7 +24,6 @@ def top():
     return render_template("top.html")
 
 
-# 管理者ログイン
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -42,7 +41,6 @@ def admin_login():
     return render_template("login.html")
 
 
-# 利用者のトイレ検索
 @app.route("/search")
 def index():
     building = request.args.get("building")
@@ -78,7 +76,6 @@ def index():
     )
 
 
-# 管理者画面
 @app.route("/admin")
 def admin():
     if not session.get("admin_logged_in"):
@@ -102,7 +99,6 @@ def admin():
     )
 
 
-# トイレ情報の登録
 @app.route("/admin/add", methods=["POST"])
 def add_toilet():
     if not session.get("admin_logged_in"):
@@ -123,7 +119,6 @@ def add_toilet():
     except (TypeError, ValueError):
         return "階は1以上の整数で入力してください。", 400
 
-    # S棟3階だけ地図上の位置を登録
     if building == "S" and floor in [3, 4, 5, 6, 7]:
         try:
             x = float(x)
@@ -151,7 +146,6 @@ def add_toilet():
     return redirect(url_for("admin"))
 
 
-# トイレ1件ずつの削除
 @app.route("/admin/delete/<int:toilet_id>", methods=["POST"])
 def delete_toilet(toilet_id):
     if not session.get("admin_logged_in"):
@@ -171,7 +165,6 @@ def delete_toilet(toilet_id):
     return redirect(url_for("admin"))
 
 
-# 棟ごとの一括削除
 @app.route("/admin/delete-building/<building>", methods=["POST"])
 def delete_building(building):
     if not session.get("admin_logged_in"):
